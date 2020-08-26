@@ -101,7 +101,7 @@ class NimAI():
         Return the Q-value for the state `state` and the action `action`.
         If no Q-value exists yet in `self.q`, return 0.
         """
-        raise NotImplementedError
+        return self.q[(tuple(state), action)] if (tuple(state), action) in self.q else 0
 
     def update_q_value(self, state, action, old_q, reward, future_rewards):
         """
@@ -118,7 +118,18 @@ class NimAI():
         `alpha` is the learning rate, and `new value estimate`
         is the sum of the current reward and estimated future rewards.
         """
-        raise NotImplementedError
+        future_reward = self.get_q_value(state, future_rewards)
+        self.q[(tuple(state), tuple(action))] = old_q + self.alpha * (reward + future_reward - old_q)
+
+    def available_actions(self, state):
+        """
+        Given a state 'state', return a set of all available actions '(i, j)'
+        """
+        available_actions = set()
+        for i, pile in enumerate(state):
+            for j in range(1, pile + 1):
+                available_actions.add((i, j))
+        return available_actions
 
     def best_future_reward(self, state):
         """
@@ -130,7 +141,13 @@ class NimAI():
         Q-value in `self.q`. If there are no available actions in
         `state`, return 0.
         """
-        raise NotImplementedError
+        if all(pile == 0 for pile in state):
+            return 0
+        available_q_values = []
+        available_actions = list(self.available_actions(state))
+        for action in available_actions:
+            available_q_values.append(self.get_q_value(state, action))
+        return available_actions[available_q_values.index(max(available_q_values))]
 
     def choose_action(self, state, epsilon=True):
         """
@@ -147,7 +164,10 @@ class NimAI():
         If multiple actions have the same Q-value, any of those
         options is an acceptable return value.
         """
-        raise NotImplementedError
+        if epsilon:
+            if random.random() < self.epsilon:
+                return random.choice(list(self.available_actions(state)))
+        return self.best_future_reward(state)
 
 
 def train(n):
